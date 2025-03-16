@@ -1,3 +1,4 @@
+import os.path
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -45,6 +46,26 @@ plt.subplot(4,1,4)
 plt.title("Realistic clear-sky irradiance")
 plt.plot(times, realistic_ghi, ".", markersize=2)
 plt.show(block=True)
+
+# Save synthetic data to .csv file
+dataset_name = "data/public/realistic_ghi_data.csv"
+if not os.path.isfile(dataset_name):
+    print(f"A synthetic irradiance dataset {dataset_name} does NOT exist.")
+    save_confirm = input("Would you like to save this one? (Y/N): ")
+else:
+    print(f"A synthetic irradiance dataset already exist in {dataset_name}")
+    save_confirm = input("Do you want to overwrite it? (Y/N): ")
+
+if save_confirm == "Y":
+    print(f"Saving dataset in {dataset_name}")
+    df = pd.DataFrame({"Timestamp": times, "GHI": realistic_ghi})
+    df.set_index("Timestamp", inplace=True)
+    df.to_csv(dataset_name)
+
+# Notes: "realistic_ghi" is of type pandas.core.series.Series
+#        "times" is of type DatetimeIndex
+
+
 
 
 
