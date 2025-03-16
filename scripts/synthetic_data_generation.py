@@ -44,8 +44,8 @@ class GenerateIrradiance:
 
     def add_sensor_disconnect(
             irradiance_ts,
-            total_fail_rate=0.10,
-            num_events=5,
+            total_fail_rate=0.15,
+            num_events=4,
             ):
         # Introduces continuous linear drift to simulate sensor disconnections
 
@@ -63,7 +63,7 @@ class GenerateIrradiance:
             y0 = irradiance_ts.iloc[index]
             m = 0.01 * rng.random(1) * np.mean(irradiance_ts)
             x = np.arange(index, index + fail_length)
-            x = x.iloc[x < length]
+            x = x[x < length]  # Prevents attempt to access inexistent values
             y = m*(x - x0) + y0
             irradiance_ts.iloc[x] = y
         
