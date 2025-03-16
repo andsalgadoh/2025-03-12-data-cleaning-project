@@ -49,21 +49,21 @@ plt.figure(1)
 plt.subplot(4,1,4)
 plt.title("Adding outliers")
 plt.plot(times, realistic_ghi, ".", markersize=2)
-plt.show(block=False)
+plt.show(block=True)
 
 
-# # Save synthetic data to .csv file
-# dataset_name = "data/public/realistic_ghi_data.csv"
-# if not os.path.isfile(dataset_name):
-#     print(f"A synthetic irradiance dataset {dataset_name} does NOT exist.")
-#     save_confirm = input("Would you like to save this one? (Y/N): ")
-# else:
-#     print(f"A synthetic irradiance dataset already exist in {dataset_name}")
-#     save_confirm = input("Do you want to overwrite it? (Y/N): ").upper()
+# Save synthetic data to .csv file
+dataset_name = "data/public/realistic_ghi_data.csv"
+if not os.path.isfile(dataset_name):
+    print(f"A synthetic irradiance dataset {dataset_name} does NOT exist.")
+    save_confirm = input("Would you like to save this one? (Y/N): ")
+else:
+    print(f"A synthetic irradiance dataset already exist in {dataset_name}")
+    save_confirm = input("Do you want to overwrite it? (Y/N): ").upper()
 
-# if save_confirm == "Y":
-#     print(f"Saving dataset in {dataset_name}")
-#     df = pd.DataFrame({"Timestamp": times, "GHI": realistic_ghi})
-#     df.set_index("Timestamp", inplace=True)
-#     df.to_csv(dataset_name)
+if save_confirm == "Y":
+    print(f"Saving dataset in {dataset_name}")
+    df = pd.DataFrame({"Timestamp": times, "GHI": realistic_ghi})
+    df.set_index("Timestamp", inplace=True)
+    df.to_csv(dataset_name)
 
