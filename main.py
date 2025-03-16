@@ -19,31 +19,31 @@ plt.title("Synthetic clearsky irradiance")
 plt.plot(times, clearsky_ghi)
 plt.show(block=False)
 
-# Add sensor malfunction examples to the data and visualize:
-print("Visualizing sensor malfunction")
-sensor_ghi = sdg.GenerateIrradiance.add_sensor_disconnect(clearsky_ghi)
+# Add extreme outliers to the data and visualize:
+print("Visualizing extreme outliers")
+extreme_ghi = sdg.GenerateIrradiance.add_extreme_outliers(clearsky_ghi)
 plt.figure(1)
 plt.subplot(4,1,2)
+plt.title("Adding outliers")
+plt.plot(times, extreme_ghi, ".", markersize=2)
+plt.show(block=False)
+
+# Add sensor malfunction examples to the data and visualize:
+print("Visualizing sensor malfunction")
+sensor_ghi = sdg.GenerateIrradiance.add_sensor_disconnect(extreme_ghi)
+plt.figure(1)
+plt.subplot(4,1,3)
 plt.title("Adding sensor malfunction")
 plt.plot(times, sensor_ghi, ".", markersize=2)
 plt.tight_layout()
 plt.show(block=False)
 
-# Add extreme outliers to the data and visualize:
-print("Visualizing extreme outliers")
-extreme_ghi = sdg.GenerateIrradiance.add_extreme_outliers(sensor_ghi)
-plt.figure(1)
-plt.subplot(4,1,3)
-plt.title("Adding outliers")
-plt.plot(times, extreme_ghi, ".", markersize=2)
-plt.show(block=False)
-
 # Add gausian noise to the data and visualize everything:
 print("Visualizing noisy synthetic irradiance")
-realistic_ghi = sdg.GenerateIrradiance.add_noise(extreme_ghi)
+realistic_ghi = sdg.GenerateIrradiance.add_noise(sensor_ghi)
 plt.figure(1)
 plt.subplot(4,1,4)
-plt.title("Realistic clear-sky irradiance")
+plt.title("Realistic clear-sky irradiance (adding noise)")
 plt.plot(times, realistic_ghi, ".", markersize=2)
 plt.show(block=True)
 
