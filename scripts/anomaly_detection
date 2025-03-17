@@ -1,0 +1,64 @@
+import numpy as np
+import pandas as pd
+import pvlib
+
+# El código debe identificar outliers, valores extremadamente más altos de lo esperable.
+# Hacer ejemplos sin irradiancia clear-sky
+# Hacer ejemplo con irradiancia clear-sky (requiere conocer ubicación geográfica)
+# Hacer detector de Linear drift
+
+def anomaly_ceiling(timeseries, max_value):
+    # Simply returns a mask
+    return timeseries > max_value
+
+def anomaly_clearsky(timeseries,
+                     location,
+                     irradiance_type,
+                     margin=1.25):
+    
+    # Check if location's name was provided
+    if "name" not in location:
+        location["name"] = "Unknown"
+
+    location = pvlib.location.Location(
+                            location["latitude"],
+                            location["longitude"],
+                            location["timezone"],
+                            name=location["name"])
+    
+    # pvlib's get_clearsky returns a dataframe of ghi, dni, dhi
+    components = location.get_clearsky(timeseries.index, model="ineichen")
+
+    # Define the clearsky component and update
+    clearsky = components[irradiance_type]
+
+    # Mask of values that exceed clear-sky irradiance by a margin
+    return  timeseries > clearsky * margin
+
+def anomaly_disconnection(timeseries,
+                          horizon=500,
+                          tolerance=1e-2,
+                          max_night_irradiance=0.05):
+    
+    X = timeseries
+    dX = timeseries.diff()  # dX(k) = X(k) - X(k-1)
+
+    # Note: Index corresponds to right edge of window.
+    condition1 = dX.rolling(horizon).max() < tolerance
+    condition2 = X < max_night_irradiance
+
+
+    # print()
+    # return m.rolling(horizon)
+    
+
+
+if __name__ == "__main__":
+    import synthetic_data_generation as sdg
+    import matplotlib as plt
+    ghi = sdg.SyntheticIrradiance()
+    x = anomaly_disconnection(ghi.series, 500, 1e-2)
+    # plt.plot(x)
+    # plt.show()
+# df['Constant_dX'] = df['dValue'].rolling(horizon).apply(lambda x: (x.std() < tolerance) and (x.iloc[0] > 0.5), raw=True)
+# df.loc[df['Constant_dX'], 'Value'] = None  # Set detected fake data to NaN

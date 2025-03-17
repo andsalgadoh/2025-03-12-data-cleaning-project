@@ -7,7 +7,7 @@ class SyntheticIrradiance:
     
     def __init__(
             self,
-            times,
+            times = pd.date_range(start="2025-03-01", end="2025-03-07", freq="min"),
             location = {"latitude": -41.13941227780086,
                         "longitude": -73.02542294598776,
                         "timezone": -4,
@@ -37,12 +37,16 @@ class SyntheticIrradiance:
         self.malfunction_mask = np.zeros_like(self.series, dtype=bool)
 
     def add_clearsky(self):
+
+        # Check if location's name was provided
+        if "name" not in self.location:
+            self.location["name"] = "Unknown"
+
         location = pvlib.location.Location(
                                 self.location["latitude"],
                                 self.location["longitude"],
                                 self.location["timezone"],
-                                name=self.location["name"]
-                                )
+                                name=self.location["name"])
         
         # pvlib's get_clearsky returns a dataframe of ghi, dni, dhi
         components = location.get_clearsky(self.times,
