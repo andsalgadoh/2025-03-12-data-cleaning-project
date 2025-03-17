@@ -42,23 +42,28 @@ def anomaly_disconnection(timeseries,
     
     X = timeseries
     dX = timeseries.diff()  # dX(k) = X(k) - X(k-1)
+    ddX = dX.diff()  # ddX(k) = dX(k) - dX(k-1) = X(k) - X(k-1) - X(k-1) + X(k-2) = X(k) -2X(k-1) + X(k-2)
 
     # Note: Index corresponds to right edge of window.
-    condition1 = dX.rolling(horizon).max() < tolerance
-    condition2 = X < max_night_irradiance
+    is_linear = ddX.rolling(horizon).max() <= tolerance
+    for k in range(horizon, len(is_linear)):
+        if is_linear.iloc[k]:
+            is_linear.iloc[k - horizon] = True
 
+    is_day_intensity = X > max_night_irradiance
 
-    # print()
-    # return m.rolling(horizon)
-    
+    # Returm mask:
+    return is_linear & is_day_intensity
 
-
+# Example code for debug
 if __name__ == "__main__":
+    import matplotlib.pyplot as plt
     import synthetic_data_generation as sdg
-    import matplotlib as plt
+
     ghi = sdg.SyntheticIrradiance()
-    x = anomaly_disconnection(ghi.series, 500, 1e-2)
-    # plt.plot(x)
-    # plt.show()
-# df['Constant_dX'] = df['dValue'].rolling(horizon).apply(lambda x: (x.std() < tolerance) and (x.iloc[0] > 0.5), raw=True)
-# df.loc[df['Constant_dX'], 'Value'] = None  # Set detected fake data to NaN
+    ghi.add_sensor_disconnect()
+    mask = anomaly_disconnection(ghi.series, 500, 1e-2)
+
+    plt.plot(ghi.times, ghi.series, '.')
+    plt.plot(ghi.times[mask], ghi.series.loc[mask], 'o', markersize=2)
+    plt.show()

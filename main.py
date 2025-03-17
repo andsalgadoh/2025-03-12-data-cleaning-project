@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import scripts.synthetic_data_generation as sdg
+import scripts.anomaly_detection as ad
 # from scripts.load_data import load_dataset
 # from utils import detect_anomalies
 
@@ -51,7 +52,6 @@ plt.title("Adding outliers")
 plt.plot(times, realistic_ghi, ".", markersize=2)
 plt.show(block=True)
 
-
 # Save synthetic data to .csv file
 dataset_name = "data/public/realistic_ghi_data.csv"
 if not os.path.isfile(dataset_name):
@@ -66,4 +66,5 @@ if save_confirm == "Y":
     df = pd.DataFrame({"Timestamp": times, "GHI": realistic_ghi})
     df.set_index("Timestamp", inplace=True)
     df.to_csv(dataset_name)
+
 
