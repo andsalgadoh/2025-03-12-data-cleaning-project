@@ -4,8 +4,6 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import scripts.synthetic_data_generation as sdg
 import scripts.anomaly_detection as ad
-# from scripts.load_data import load_dataset
-# from utils import detect_anomalies
 
 # Generate synthetic irradiance data:
 times = pd.date_range(start="2025-03-01", end="2025-03-07", freq="min")
