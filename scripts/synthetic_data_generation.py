@@ -3,6 +3,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import pvlib
 
+
 class SyntheticIrradiance:
     
     def __init__(
@@ -58,7 +59,7 @@ class SyntheticIrradiance:
         return self.series
                                          
     def add_noise(self,
-                  noise_level=0.01):
+                  noise_level=0.001):
         std = noise_level * np.max(self.clearsky)
         rng = np.random.default_rng()
         
@@ -97,14 +98,14 @@ class SyntheticIrradiance:
         fail_length = round(len(self.series) * (disconnect_ratio / num_events))
 
         rng = np.random.default_rng()
-        # Check indices are distanced from each other (10 attempts)
-        for count in range(1,11):
+        # Check indices are distanced from each other (15 attempts)
+        for count in range(1,16):
             indices = rng.choice(a = len(self.series) - fail_length,
                                  size=num_events)
             indices = np.sort(indices)
             d_idx = np.diff(indices)
 
-            if all(np.abs(d_idx) >= 2 * fail_length):
+            if all(d_idx >= 2 * fail_length):
                 break
             
         # Linear drift (starts from clearsky model)

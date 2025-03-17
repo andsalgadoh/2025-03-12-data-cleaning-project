@@ -35,17 +35,24 @@ def anomaly_clearsky(timeseries,
     # Mask of values that exceed clear-sky irradiance by a margin
     return  timeseries > clearsky * margin
 
-def anomaly_disconnection(timeseries,
-                          horizon=500,
-                          tolerance=1e-2,
-                          max_night_irradiance=0.05):
-    
+def anomaly_linear(timeseries,
+                   horizon=500,
+                   tolerance=1e-2,
+                   max_night_irradiance=0.05):
+    """ Adjust a linear curve to a rolling horizon
+        to evaluate how good of a fit it is at each step
+    """
+    def linfit_score(ts):
+        t = np.arange(len(ts))
+        slope, intercept = np.polyfit(t, ts, 1)
+        x_fit = slope * t + intercept
+        return np.std(ts - x_fit)
+
     X = timeseries
-    dX = timeseries.diff()  # dX(k) = X(k) - X(k-1)
-    ddX = dX.diff()  # ddX(k) = dX(k) - dX(k-1) = X(k) - X(k-1) - X(k-1) + X(k-2) = X(k) -2X(k-1) + X(k-2)
+    X.rolling(horizon).apply(lambda s: linfit_score(s))
 
     # Note: Index corresponds to right edge of window.
-    is_linear = ddX.rolling(horizon).max() <= tolerance
+    is_linear = X.rolling(horizon).apply(lambda s: linfit_score(s)) <= tolerance
     for k in range(horizon, len(is_linear)):
         if is_linear.iloc[k]:
             is_linear.iloc[k - horizon] = True
