@@ -2,11 +2,6 @@ import numpy as np
 import pandas as pd
 import pvlib
 
-# El código debe identificar outliers, valores extremadamente más altos de lo esperable.
-# Hacer ejemplos sin irradiancia clear-sky
-# Hacer ejemplo con irradiancia clear-sky (requiere conocer ubicación geográfica)
-# Hacer detector de Linear drift
-
 def anomaly_ceiling(timeseries, max_value):
     # Simply returns a mask
     return timeseries > max_value
@@ -36,9 +31,9 @@ def anomaly_clearsky(timeseries,
     return  timeseries > clearsky * margin
 
 def anomaly_linear(timeseries,
-                   horizon=500,
-                   tolerance=1e-2,
-                   max_night_irradiance=0.05):
+                   horizon=120,
+                   tolerance=1,
+                   max_night_irradiance=10):
     """ Adjust a linear curve to a rolling horizon
         to evaluate how good of a fit it is at each step
     """
@@ -69,8 +64,8 @@ if __name__ == "__main__":
 
     ghi = sdg.SyntheticIrradiance()
     ghi.add_sensor_disconnect()
-    mask = anomaly_disconnection(ghi.series, 500, 1e-2)
+    mask = anomaly_linear(ghi.series, 120, 1)
 
     plt.plot(ghi.times, ghi.series, '.')
-    plt.plot(ghi.times[mask], ghi.series.loc[mask], 'o', markersize=2)
+    plt.plot(ghi.times[mask], ghi.series.loc[mask], '.', markersize=2)
     plt.show()
