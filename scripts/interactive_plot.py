@@ -3,7 +3,10 @@ import numpy as np
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QPushButton, QSlider, QLabel
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
-from . import anomaly_detection as ad
+
+if not __name__ == "__main__":
+    from . import anomaly_detection as ad
+
 
 class AnomalyDetector(QWidget):
     def __init__(self,
@@ -111,7 +114,7 @@ class AnomalyDetector(QWidget):
 # Example code for debug
 if __name__ == "__main__":
     import synthetic_data_generation as sdg
-
+    import anomaly_detection as ad
     ghi = sdg.SyntheticIrradiance()
     ghi.add_sensor_disconnect()
     ghi.add_noise()
