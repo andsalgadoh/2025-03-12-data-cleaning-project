@@ -12,7 +12,8 @@ My goals for this project are:
 
 ## Scripts Folder:
 ### anomaly_detection.py
-function: anomaly_clearsky()
+function: anomaly_clearsky()\
+Detects outliers based on a threshold using a clearsky-irradiance-model and a margin input
 
 **Inputs:**\
 timeseries\
@@ -30,4 +31,4 @@ Implements a threshold using the function:
 
 Returns:\
 **mask** - boolean array mean to be used to retrieve only valid values from the timeseries\
-**irradiance_threshold** - the result of implementing the threshold using a clearsky irradiance model and a margin.
+**irradiance_threshold** - The resulting timeseries that serves as the threshold.
