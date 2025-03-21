@@ -5,7 +5,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 import scripts.synthetic_data_generation as sdg
-import scripts.anomaly_detection as ad
+import scripts.anomaly_detection as ad1
 import scripts.interactive_plot as intplot
 
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QPushButton, QLineEdit, QLabel
@@ -84,6 +84,6 @@ plt.show(block=False)
 
 # Run the application
 app = QApplication(sys.argv)
-window = intplot.AnomalyDetector(ghi.series)
+window = intplot.AnomalyDetector(ghi.series, ghi.location)
 window.show()
 sys.exit(app.exec_())

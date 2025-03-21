@@ -11,14 +11,18 @@ if not __name__ == "__main__":
 class AnomalyDetector(QWidget):
     def __init__(self,
                  irradiance_series,
+                 location,
                  horizon=120,
                  tolerance=1,
-                 night_tol=10):
+                 night_tol=10,
+                 outlier_tol = 1.2):
         super().__init__()
         self.series = irradiance_series
         self.horizon = horizon
         self.tolerance = tolerance
         self.night_tol = night_tol
+        self.outlier_tol = outlier_tol
+        self.location = location
         self.initUI()
         
     def initUI(self):
@@ -64,7 +68,22 @@ class AnomalyDetector(QWidget):
         self.night_slider.setTickInterval(1)
         self.night_slider.setTickPosition(QSlider.TicksBelow)
         self.night_slider.valueChanged.connect(self.update_parameters)
-        layout.addWidget(self.night_slider)        
+        layout.addWidget(self.night_slider)      
+
+        # Outlier tolerance:
+        self.outlier_tol_label = QLabel(f"Outlier tolerance: {self.outlier_tol:.0%}")
+        layout.addWidget(self.outlier_tol_label)
+
+        self.outlier_tol_slider = QSlider()
+        self.outlier_tol_slider.setOrientation(1)  # Vertical
+        self.outlier_tol_slider.setMinimum(10)
+        self.outlier_tol_slider.setMaximum(15)
+        self.outlier_tol_slider.setValue(int(self.outlier_tol * 10))  # Remember to change scale in update_parameters() too
+        self.outlier_tol_slider.setTickInterval(1)
+        self.outlier_tol_slider.setTickPosition(QSlider.TicksBelow)
+        self.outlier_tol_slider.valueChanged.connect(self.update_parameters)
+        layout.addWidget(self.outlier_tol_slider)
+
 
         # Matplotlib Figure
         self.figure, self.ax = plt.subplots()
@@ -80,10 +99,13 @@ class AnomalyDetector(QWidget):
         self.horizon = 10 * self.horizon_slider.value()
         self.tolerance = 10 ** (self.tolerance_slider.value() / 10)
         self.night_tol = self.night_slider.value()
+        self.outlier_tol = self.outlier_tol_slider.value() / 10
 
         self.horizon_label.setText(f"Linear fit horizon: {self.horizon}")
         self.tolerance_label.setText(f"Linear fit tolerance: {self.tolerance:.2f}")
         self.night_label.setText(f"Night tolerance: {self.night_tol} [W/m^2]")
+        self.outlier_tol_label.setText(f"Outlier tolerance: {self.outlier_tol:.0%}")
+
 
         self.update_plot()  # Re-run detection and update plot
     
@@ -92,22 +114,42 @@ class AnomalyDetector(QWidget):
                                          self.horizon,
                                          self.tolerance,
                                          self.night_tol)
-       
+        
+        anomaly_mask2, csky_threshold = ad.anomaly_clearsky(
+                                            self.series,
+                                            self.location,
+                                            "ghi",
+                                            self.outlier_tol)
+
         self.ax.clear()
         self.ax.plot(self.series.index,
                      self.series,
                      '.',
-                     markersize=2,
+                     markersize=1.5,
                      label="Irradiance",
                      color="blue")
+        
+        self.ax.scatter(self.series.index[anomaly_mask2],
+                        self.series.loc[anomaly_mask2],
+                        label="Outliers",
+                        color="green")
+
         self.ax.scatter(self.series.index[anomaly_mask],
                         self.series.loc[anomaly_mask],
-                        label="Anomaly",
-                        color="red",)
+                        label="Linear anomaly",
+                        color="red")
+        
+        self.ax.plot(self.series.index,
+                     csky_threshold,
+                     linestyle="dashed",                     
+                     label="Outlier threshold",
+                     color="black",
+                     linewidth=0.5)
+
         self.ax.legend()
         self.ax.set_xlabel("Time")
         self.ax.set_ylabel("Irradiance")
-        self.ax.set_title("Sensor disconnection anomaly detection")
+        self.ax.set_title("Anomaly detection example")
         
         self.canvas.draw()
 
@@ -118,9 +160,10 @@ if __name__ == "__main__":
     ghi = sdg.SyntheticIrradiance()
     ghi.add_sensor_disconnect()
     ghi.add_noise()
+    ghi.add_outliers()
 
     # Run the application
     app = QApplication(sys.argv)
-    window = AnomalyDetector(ghi.series)
+    window = AnomalyDetector(ghi.series, ghi.location)
     window.show()
     sys.exit(app.exec_())
