@@ -10,9 +10,9 @@ My goals for this project are:
 1) Get familiarized with Python and its libraries: numpy, pandas, matplotlib, pytorch.
 2) Build interactive visualizations for my data-cleaning algorithms. I'm specially interested in viewing the effect of tuning a certain parameter in real time, to see what data points are chosen for each tolerance value.
 
-## Scripts Folder:
-### anomaly_detection.py
-function: anomaly_clearsky()\
+# Scripts Folder:
+## anomaly_detection.py
+### function: anomaly_clearsky()\
 Detects outliers based on a threshold using a clearsky-irradiance-model and a margin input
 
 **Inputs:**\
