@@ -12,7 +12,7 @@ My goals for this project are:
 
 # Scripts Folder:
 ## anomaly_detection.py
-### function: anomaly_clearsky()\
+### function: anomaly_clearsky()
 Detects outliers based on a threshold using a clearsky-irradiance-model and a margin input
 
 **Inputs:**\
