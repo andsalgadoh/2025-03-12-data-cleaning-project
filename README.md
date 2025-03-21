@@ -1,4 +1,4 @@
-## WORK IN PROGRESS ##
+# WORK IN PROGRESS
 
 This is part of my personal Python practice.
 
@@ -9,3 +9,25 @@ The code here is meant to:
 My goals for this project are:
 1) Get familiarized with Python and its libraries: numpy, pandas, matplotlib, pytorch.
 2) Build interactive visualizations for my data-cleaning algorithms. I'm specially interested in viewing the effect of tuning a certain parameter in real time, to see what data points are chosen for each tolerance value.
+
+## Scripts Folder:
+### anomaly_detection.py
+function: anomaly_clearsky()
+
+**Inputs:**\
+timeseries\
+location\
+irradiance_type
+
+Optional:\
+margin (default = 1.2)\
+max_night_irradiance (default = 10)
+  
+Implements a threshold using the function:
+```math
+\text{Threshold}(t) = \max \{ \text{clearsky}(t) \times \text{margin}, \text{clearsky}(t) + 50 \}
+```
+
+Returns:\
+**mask** - boolean array mean to be used to retrieve only valid values from the timeseries\
+**irradiance_threshold** - the result of implementing the threshold using a clearsky irradiance model and a margin.
