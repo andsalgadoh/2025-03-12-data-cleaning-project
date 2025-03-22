@@ -2,6 +2,21 @@ import numpy as np
 import pandas as pd
 import pvlib
 
+def get_night_mask(timeseries, location):
+    # Takes a timeseries and pvlib.Location and returns a mask for the nighttime values
+    times = timeseries.index
+
+    # Check if the times input is timezone-aware:
+    if times.tz is None:
+        raise ValueError("DatetimeIndex must be timezone-aware.")
+
+    df = pvlib.solarposition.sun_rise_set_transit_spa(times,
+                                                      location.latitude,
+                                                      location.longitude,
+                                                      how="numpy")
+    return (times < df["sunrise"]) | (times > df["sunset"])
+
+
 def anomaly_ceiling(timeseries, max_value):
     # Simply returns a mask
     return timeseries > max_value
@@ -83,8 +98,26 @@ if __name__ == "__main__":
 
     ghi = sdg.SyntheticIrradiance()
     ghi.add_sensor_disconnect()
-    mask = anomaly_linear(ghi.series, 120, 1)
+    linear_mask = anomaly_linear(ghi.series, 120, 1)
 
-    plt.plot(ghi.times, ghi.series, '.')
-    plt.plot(ghi.times[mask], ghi.series.loc[mask], '.', markersize=2)
+
+    # Test night_mask
+    night_mask = get_night_mask(ghi.series, ghi.location)
+
+    # plot tests:
+    plt.plot(ghi.times,
+             ghi.series,
+             'b.',
+             markersize=2,
+             label="timeseries")
+    plt.plot(ghi.times[linear_mask],
+             ghi.series.loc[linear_mask],
+             'r.',
+             markersize=2,
+             label="linear anomaly")
+    plt.plot(ghi.times,
+             night_mask * np.max(ghi.clearsky),
+             'k-',
+             markersize=2,
+             label="night_mask")
     plt.show()
