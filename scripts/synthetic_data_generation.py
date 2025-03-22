@@ -1,8 +1,6 @@
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 import pvlib
-
 
 class SyntheticIrradiance:
     
@@ -19,7 +17,7 @@ class SyntheticIrradiance:
         self.location = location
         self.irradiance_type = irradiance_type
 
-        self.series = np.zeros(len(times))
+        self.series = pd.Series(np.zeros(len(times)), index=times)
         self.add_clearsky()
         """ The purpose of self.series is to provide
             easy access to the finished build of the series.
@@ -38,7 +36,6 @@ class SyntheticIrradiance:
         self.malfunction_mask = np.zeros_like(self.series, dtype=bool)
 
     def add_clearsky(self):
-
         # Check if location's name was provided
         if "name" not in self.location:
             self.location["name"] = "Unknown"
@@ -92,30 +89,45 @@ class SyntheticIrradiance:
                               disconnect_ratio=0.15,
                               num_events=4,
                              ):
-        pass
+        
         # Introduces continuous linear drift to simulate sensor disconnections
+        fault_duration = round(len(self.series)
+                               * (disconnect_ratio / num_events))
 
-        fail_length = round(len(self.series) * (disconnect_ratio / num_events))
-
+        # Get indices for each event ensuring they are distanced from each other
+        indices = []
+        attempts = 0
+        max_attempts = 15  # Limit to 15 continuous failed attempts.
         rng = np.random.default_rng()
-        # Check indices are distanced from each other (15 attempts)
-        for count in range(1,16):
-            indices = rng.choice(a = len(self.series) - fail_length,
-                                 size=num_events)
-            indices = np.sort(indices)
-            d_idx = np.diff(indices)
 
-            if all(d_idx >= 2 * fail_length):
-                break
-            
+        while len(indices) < num_events and attempts < max_attempts:
+            candidate = rng.integers(0, len(self.series) - fault_duration)
+            if all(abs(candidate - i) >= 2 * fault_duration for i in indices):
+                indices.append(candidate)
+                attempts = 0
+            else:
+                attempts += 1
+        indices.sort()
+        
+        # Log warning if we couldn't place all events
+        if len(indices) < num_events:
+            print("Warning: 'add_sensor_disconnect()'")
+            print(f"only placed {len(indices)} out of {num_events} events.")
+
         # Linear drift (starts from clearsky model)
         for index in indices:
             x0 = index
             y0 = self.clearsky.iloc[index]
-            m = 0.005 * rng.random(1) * np.mean(self.clearsky)
-            x = np.arange(index, index + fail_length)
-            x = x[x < len(self.clearsky)]  # Prevents attempt to access inexistent values
-            y = m*(x - x0) + y0
+
+            # Slope: max slope raises irradiance from 0 to peak in ~12 hours.
+            step_time = self.clearsky.index[x0 + 1] - self.clearsky.index[x0]
+            steps_in_12h = pd.Timedelta(12, "h") / step_time
+            slope = rng.random(1) * np.max(self.clearsky)/(steps_in_12h)
+
+            # Create linear drift series:
+            x = np.arange(index, index + fault_duration)
+            x = x[x < len(self.clearsky)]  # Prevents attempt inexistent values
+            y = slope*(x - x0) + y0
 
             # Update masks
             self.malfunction_mask[x] = True
@@ -124,3 +136,25 @@ class SyntheticIrradiance:
             # Update series
             self.series.iloc[x] = y
         return self.series
+
+if __name__ == '__main__':
+    # Test script:
+    import matplotlib.pyplot as plt
+
+    ghi = SyntheticIrradiance()
+    ghi.add_sensor_disconnect()
+
+    plt.plot(ghi.times,
+             ghi.clearsky,
+             'b-',
+             linewidth=0.5,
+             label="clearsky")
+
+    plt.plot(ghi.times,
+             ghi.series,
+             'r.',
+             markersize=1,
+             label="modified")
+    
+    plt.legend()
+    plt.show()
