@@ -115,18 +115,20 @@ class SyntheticIrradiance:
             print(f"only placed {len(indices)} out of {num_events} events.")
 
         # Linear drift (starts from clearsky model)
+        # Define max slope as raising irradiance from 0 to max in 12 hours.
+        step_time = self.clearsky.index[1] - self.clearsky.index[0]
+        num_steps_in_12h = pd.Timedelta(12, "h") / step_time
+        max_slope = np.max(self.clearsky)/(num_steps_in_12h)
+
         for index in indices:
             x0 = index
             y0 = self.clearsky.iloc[index]
 
-            # Slope: max slope raises irradiance from 0 to peak in ~12 hours.
-            step_time = self.clearsky.index[x0 + 1] - self.clearsky.index[x0]
-            steps_in_12h = pd.Timedelta(12, "h") / step_time
-            slope = rng.random(1) * np.max(self.clearsky)/(steps_in_12h)
+            slope = max_slope * rng.random(1)
 
             # Create linear drift series:
             x = np.arange(index, index + fault_duration)
-            x = x[x < len(self.clearsky)]  # Prevents attempt inexistent values
+            x = x[x < len(self.clearsky)]  # Prevent access to inexistent values
             y = slope*(x - x0) + y0
 
             # Update masks
