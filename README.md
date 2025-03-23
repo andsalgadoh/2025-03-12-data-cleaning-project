@@ -12,23 +12,31 @@ My goals for this project are:
 
 # Scripts Folder:
 ## anomaly_detection.py
+### function: get_night_mask()
+Takes time and location and returns a mask for night timestamps, it makes use of pvlib's sun_rise_set_transit_spa() function:\
+https://pvlib-python.readthedocs.io/en/v0.6.1/generated/pvlib.solarposition.sun_rise_set_transit_spa.html
+
 ### function: anomaly_clearsky()
-Detects outliers based on a threshold using a clearsky-irradiance-model and a margin input
+Identifies outliers in a timeseries of irradiance data by comparing it to 
+a clearsky model.
 
-**Inputs:**\
-timeseries\
-location\
-irradiance_type
-
-Optional:\
-margin (default = 1.2)\
-max_night_irradiance (default = 10)
+Args:\
+  **timeseries**: The irradiance timeseries to check.\
+  **location**: The pvlib Location object representing the site.\
+  **irradiance_type**: The type of irradiance (e.g., 'ghi', 'dni', 'dhi').\
+  **day_margin**: The margin by which the timeseries can deviate from the clearsky model before being considered an anomaly.\
+  **night_threshold**: A threshold value for nighttime irradiance.\
   
-Implements a threshold using the function:
+Returns:\
+  **mask**: A pandas Series with boolean values indicating anomalies.\
+  **general_threshold**: A pandas Series to plot the boundary of the algorithm
+
+For day values: It identifies an outlier if
 ```math
-\text{Threshold}(t) = \max \{ \text{clearsky}(t) \times \text{margin}, \text{clearsky}(t) + 50 \}
+\text{Value}(t) > \max \{ \text{clearsky}(t) \times \text{margin}, \text{clearsky}(t) + 50 \}
+```
+For night values: It identifies as an outlier if:
+```math
+\text{Value}(t) > 10
 ```
 
-Returns:\
-**mask** - boolean array mean to be used to retrieve only valid values from the timeseries\
-**irradiance_threshold** - The resulting timeseries that serves as the threshold.
