@@ -1,18 +1,27 @@
 import sys
 import os.path
+import pvlib
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
 import scripts.synthetic_data_generation as sdg
-import scripts.anomaly_detection as ad1
+import scripts.anomaly_detection as ad
 import scripts.interactive_plot as intplot
 
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QPushButton, QLineEdit, QLabel
 
 # Generate synthetic irradiance data:
-times = pd.date_range(start="2025-03-01", end="2025-03-07", freq="min")
-ghi = sdg.SyntheticIrradiance(times)  # Initialized with a clearsky model
+times = pd.date_range(start="2025-03-01",
+                      end="2025-03-06",
+                      freq="min",
+                      tz="America/Santiago")
+location = pvlib.location.Location(latitude=-41.13941227780086,
+                                       longitude=-73.02542294598776,
+                                       tz="America/Santiago",
+                                       name="Frutillar")
+
+ghi = sdg.SyntheticIrradiance(times, location)  # Initialized with a clearsky model
 
 # Visualize synthetic irradiance data:
 clearsky_ghi = ghi.series

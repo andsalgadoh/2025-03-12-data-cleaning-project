@@ -2,6 +2,11 @@ import numpy as np
 import pandas as pd
 import pvlib
 
+if __name__ == "__main__":
+    from utils import validate_pvlib_location, validate_timezone_aware
+else:
+    from . utils import validate_pvlib_location, validate_timezone_aware
+
 class SyntheticIrradiance:
 
     def __init__(
@@ -9,18 +14,16 @@ class SyntheticIrradiance:
             times = pd.date_range(start="2025-03-01",
                                   end="2025-03-07",
                                   freq="min",
-                                  tz="America/Santiago",
-                                  ),
+                                  tz="America/Santiago"),
             location = pvlib.location.Location(latitude=-41.13941227780086,
                                                longitude=-73.02542294598776,
                                                tz="America/Santiago",
-                                               name="Frutillar"
-                                               ),
+                                               name="Frutillar"),
             irradiance_type = "ghi"):
         
-        # Check if the times input is timezone-aware:
-        if times.tz is None:
-            raise ValueError("DatetimeIndex must be timezone-aware.")
+        # Check input validity:
+        validate_pvlib_location(location)
+        validate_timezone_aware(times)
         
         # Initialize values:
         self.times = times
@@ -48,13 +51,14 @@ class SyntheticIrradiance:
         """
 
     def add_clearsky(self):
+        # Define the clearsky component and update
+
         # pvlib's get_clearsky returns a dataframe of ghi, dni, dhi
         components = self.location.get_clearsky(self.times, model="ineichen")
-
-        # Define the clearsky component and update
         self.clearsky = components[self.irradiance_type]
+
         self.series = self.series + self.clearsky
-        return
+        return self.clearsky
                                          
     def add_noise(self, noise_level=0.001):
         std = noise_level * np.max(self.clearsky)
@@ -65,7 +69,7 @@ class SyntheticIrradiance:
                                 scale=std,
                                 size=len(self.times))
         self.series = self.series + self.noise
-        return
+        return self.series
     
     def add_outliers(self, outlier_cap=3.0, outlier_percentage=0.01):
         # Introduce outliers at random positions
@@ -87,7 +91,7 @@ class SyntheticIrradiance:
         
         # Update the timeseries:
         self.series.loc[self.outlier_mask] = outlier_values
-        return
+        return self.series
 
     def add_sensor_disconnect(self,
                               disconnect_ratio=0.15,
@@ -145,7 +149,7 @@ class SyntheticIrradiance:
 if __name__ == '__main__':
     # Test script:
     import matplotlib.pyplot as plt
-
+    
     ghi = SyntheticIrradiance()
     ghi.add_outliers()
     ghi.add_noise()

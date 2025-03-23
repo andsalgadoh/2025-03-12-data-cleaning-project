@@ -2,13 +2,21 @@ import numpy as np
 import pandas as pd
 import pvlib
 
-def get_night_mask(timeseries, location):
-    # Takes a timeseries and pvlib.Location and returns a mask for the nighttime values
-    times = timeseries.index
+if __name__ == "__main__":
+    from utils import validate_pvlib_location, validate_timezone_aware
+else:
+    from . utils import validate_pvlib_location, validate_timezone_aware
 
-    # Check if the times input is timezone-aware:
-    if times.tz is None:
-        raise ValueError("DatetimeIndex must be timezone-aware.")
+
+def get_night_mask(times: pd.DatetimeIndex,
+                   location: pvlib.location.Location) -> np.ndarray:
+    """ Takes time and location and returns a mask for night timestamps.
+        timeseries: pandas.Series (must be timezone aware)
+        Location: pvlib.location.Location
+    """
+    # Check input validity:
+    validate_pvlib_location(location)
+    validate_timezone_aware(times)
 
     df = pvlib.solarposition.sun_rise_set_transit_spa(times,
                                                       location.latitude,
@@ -17,79 +25,83 @@ def get_night_mask(timeseries, location):
     return (times < df["sunrise"]) | (times > df["sunset"])
 
 
-def anomaly_ceiling(timeseries, max_value):
+def anomaly_ceiling(timeseries: pd.Series, max_value: float):
     # Simply returns a mask
     return timeseries > max_value
 
-def anomaly_clearsky(timeseries,
-                     location,
-                     irradiance_type,
-                     margin=1.2,
-                     max_night_irradiance=10):
-    """_summary_
+def anomaly_clearsky(timeseries: pd.Series,
+                     location: pvlib.location.Location,
+                     irradiance_type: str,
+                     day_margin: float = 1.25,
+                     night_threshold: float = 10):
+    """
+    Identifies outliers in a timeseries of irradiance data by comparing it to 
+    a clearsky model.
 
     Args:
-        timeseries (_pandas Series or dataframe_): Irradiance timeseries
-        location (_dictionary_): Must include latitude, longitude, and timezone
-        irradiance_type (_string_): "ghi", "dni" or "dhi"
-        margin (float, optional): for outlier detection, defaults to 1.2.
-        max_night_irradiance (int, optional): Threshold to ignor irradiance,
-        Defaults to 10.
+        timeseries: The irradiance timeseries to check.
+        location: The pvlib Location object representing the site.
+        irradiance_type: The type of irradiance (e.g., 'ghi', 'dni', 'dhi').
+        day_margin: The margin by which the timeseries can deviate from the 
+            clearsky model before being considered an anomaly.
+        night_threshold: A threshold value for nighttime irradiance.
 
     Returns:
-        mask 1 _logical_: Mask of values that are considered outliers
-        irradiance_threshold _pandas.Series_: to plot the algorithm's margin
+        mask: A pandas Series with boolean values indicating anomalies.
+        general_threshold: A pandas Series to plot the boundary of the algorithm
     """
-    
-    # Check if location's name was provided
-    if "name" not in location:
-        location["name"] = "Unknown"
-
-    # Get clearsky irradiance for the location:
-    pvlocation = pvlib.location.Location(
-                            location["latitude"],
-                            location["longitude"],
-                            location["timezone"],
-                            name=location["name"])
-    components = pvlocation.get_clearsky(timeseries.index, model="ineichen")
+    is_night = get_night_mask(timeseries.index, location)
 
     # pvlib's get_clearsky returns a dataframe of ghi, dni, dhi
+    components = location.get_clearsky(timeseries.index, model="ineichen")
     clearsky = components[irradiance_type]
     
     # Mask of values that exceed an irradiance threshold:
     # Adjusted to compensate for lower values when irradiance is closer to 0.
-    irradiance_threshold = np.maximum(clearsky * margin, clearsky + 50)
-    is_daytime = timeseries > max_night_irradiance
-    is_outlier = timeseries > irradiance_threshold
-    mask = is_daytime & is_outlier
+    day_threshold = np.maximum(clearsky * day_margin, clearsky + 50)
+    general_threshold = day_threshold
+    general_threshold[is_night] = night_threshold
+    
+    is_day_outlier = ~is_night & (timeseries > day_threshold)
+    is_night_outlier = is_night & (timeseries > night_threshold)
 
-    return mask, irradiance_threshold
+    mask = is_day_outlier | is_night_outlier
+    return mask, general_threshold
 
-def anomaly_linear(ts,
-                   horizon=120,
-                   tolerance=1,
-                   max_night_irradiance=10,
-                   linfit_accuracy=1):
-    """ Adjust a linear curve to a rolling horizon
-        to evaluate how good of a fit it is at each step
+def anomaly_linear(timeseries: pd.Series,
+                   location: pvlib.location.Location,
+                   horizon: int = 120,
+                   tolerance: float = 1,
+                   min_irradiance: float = 10):
+    
+    is_daytime = ~ get_night_mask(timeseries.index, location)
+    is_relevant = (timeseries.values >= min_irradiance) & is_daytime
+
     """
-    def linfit_score(ts):
-        t = np.arange(len(ts))
-        slope, intercept = np.polyfit(t, ts, 1)
+    Adjust a linear curve to a rolling horizon to evaluate how good of a fit it
+    is at each step. Ignores night values.
+    """
+
+    def linfit_score(series_sample) -> float:
+        t = np.arange(len(series_sample))
+        slope, intercept = np.polyfit(t, series_sample, 1)
 
         # Calculate score and return:
         x_fit = slope * t + intercept
-        return np.std(ts - x_fit)
+        return np.std(series_sample - x_fit)
 
-    # Note: Index corresponds to right edge of window.
-    is_linear = ts.rolling(horizon).apply(lambda s: linfit_score(s)) <= tolerance
+    # Use a moving window:
+    is_linear = timeseries.rolling(horizon).apply(
+        lambda s: linfit_score(s)) <= tolerance
+    
+    # Index corresponds to right edge, so we fill the rest of the window:
     for k in range(horizon, len(is_linear)):
         if is_linear.iloc[k]:
             is_linear.iloc[k - horizon] = True
 
-    # Return mask:
-    is_daytime = ts > max_night_irradiance
-    return is_linear & is_daytime
+    return is_linear & is_relevant
+
+
 
 # Example code for debug
 if __name__ == "__main__":
@@ -102,8 +114,8 @@ if __name__ == "__main__":
 
 
     # Test night_mask
-    night_mask = get_night_mask(ghi.series, ghi.location)
-
+    night_mask = get_night_mask(ghi.times, ghi.location)
+    print(f"type of night_mask: {type(night_mask)}")
     # plot tests:
     plt.plot(ghi.times,
              ghi.series,

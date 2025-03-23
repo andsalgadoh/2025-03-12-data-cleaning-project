@@ -57,14 +57,14 @@ class AnomalyDetector(QWidget):
         layout.addWidget(self.tolerance_slider)        
         
         # Night TOL slider
-        self.night_label = QLabel(f"Night tolerance: {self.night_tol} [W/m^2]")
+        self.night_label = QLabel(f"Lower threshold: {self.night_tol} [W/m^2]")
         layout.addWidget(self.night_label)
         
         self.night_slider = QSlider()
         self.night_slider.setOrientation(1)  # Vertical
         self.night_slider.setMinimum(0)
         self.night_slider.setMaximum(10)
-        self.night_slider.setValue(self.night_tol)  # Scale up for precision
+        self.night_slider.setValue(self.night_tol)
         self.night_slider.setTickInterval(1)
         self.night_slider.setTickPosition(QSlider.TicksBelow)
         self.night_slider.valueChanged.connect(self.update_parameters)
@@ -103,7 +103,7 @@ class AnomalyDetector(QWidget):
 
         self.horizon_label.setText(f"Linear fit horizon: {self.horizon}")
         self.tolerance_label.setText(f"Linear fit tolerance: {self.tolerance:.2f}")
-        self.night_label.setText(f"Night tolerance: {self.night_tol} [W/m^2]")
+        self.night_label.setText(f"Lower threshold: {self.night_tol} [W/m^2]")
         self.outlier_tol_label.setText(f"Outlier tolerance: {self.outlier_tol:.0%}")
 
 
@@ -111,15 +111,15 @@ class AnomalyDetector(QWidget):
     
     def update_plot(self):
         anomaly_mask = ad.anomaly_linear(self.series,
+                                         self.location,
                                          self.horizon,
-                                         self.tolerance,
-                                         self.night_tol)
+                                         self.tolerance)
         
-        anomaly_mask2, csky_threshold = ad.anomaly_clearsky(
-                                            self.series,
-                                            self.location,
-                                            "ghi",
-                                            self.outlier_tol)
+        anomaly_mask2, csky_threshold = ad.anomaly_clearsky(self.series,
+                                                            self.location,
+                                                            "ghi",
+                                                            self.outlier_tol,
+                                                            self.night_tol)
 
         self.ax.clear()
         self.ax.plot(self.series.index,
@@ -131,21 +131,26 @@ class AnomalyDetector(QWidget):
         
         self.ax.scatter(self.series.index[anomaly_mask2],
                         self.series.loc[anomaly_mask2],
-                        label="Outliers",
+                        label="Clearsky outliers",
                         color="green")
 
-        self.ax.scatter(self.series.index[anomaly_mask],
-                        self.series.loc[anomaly_mask],
-                        label="Linear anomaly",
-                        color="red")
-        
         self.ax.plot(self.series.index,
                      csky_threshold,
                      linestyle="dashed",                     
-                     label="Outlier threshold",
+                     label="Clearsky outlier threshold",
                      color="black",
                      linewidth=0.5)
-
+        
+        self.ax.scatter(self.series.index[anomaly_mask],
+                        self.series.loc[anomaly_mask],
+                        label="Linear anomaly (daytime)",
+                        color="red")
+        
+        self.ax.scatter(self.series.index[anomaly_mask & anomaly_mask2],
+                        self.series.loc[anomaly_mask & anomaly_mask2],
+                        label="Both",
+                        color="purple")
+        
         self.ax.legend()
         self.ax.set_xlabel("Time")
         self.ax.set_ylabel("Irradiance")
